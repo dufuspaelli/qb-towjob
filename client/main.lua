@@ -8,6 +8,7 @@ local LastVehicle = 0
 local VehicleSpawned = false
 local selectedVeh = nil
 local ranWorkThread = false
+local markerOn = false 
 
 -- Functions
 
@@ -23,6 +24,7 @@ end
 local function deliverVehicle(vehicle)
     DeleteVehicle(vehicle)
     RemoveBlip(CurrentBlip2)
+    markerOn = false
     JobsDone = JobsDone + 1
     VehicleSpawned = false
     QBCore.Functions.Notify("You Have Delivered A Vehicle", "success")
@@ -210,6 +212,36 @@ RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     end
 end)
 
+AddEventHandler('onResourceStart', function(resource)
+	if resource == 'qb-towjob' then 
+        PlayerJob = QBCore.Functions.GetPlayerData().job
+
+        if PlayerJob.name == "tow" then
+            local TowBlip = AddBlipForCoord(Config.Locations["main"].coords.x, Config.Locations["main"].coords.y, Config.Locations["main"].coords.z)
+            SetBlipSprite(TowBlip, 477)
+            SetBlipDisplay(TowBlip, 4)
+            SetBlipScale(TowBlip, 0.6)
+            SetBlipAsShortRange(TowBlip, true)
+            SetBlipColour(TowBlip, 15)
+            BeginTextCommandSetBlipName("STRING")
+            AddTextComponentSubstringPlayerName(Config.Locations["main"].label)
+            EndTextCommandSetBlipName(TowBlip)
+
+            local TowVehBlip = AddBlipForCoord(Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z)
+            SetBlipSprite(TowVehBlip, 326)
+            SetBlipDisplay(TowVehBlip, 4)
+            SetBlipScale(TowVehBlip, 0.6)
+            SetBlipAsShortRange(TowVehBlip, true)
+            SetBlipColour(TowVehBlip, 15)
+            BeginTextCommandSetBlipName("STRING")
+            AddTextComponentSubstringPlayerName(Config.Locations["vehicle"].label)
+            EndTextCommandSetBlipName(TowVehBlip)
+
+            RunWorkThread()
+        end
+    end
+end)
+
 RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
     PlayerJob = JobInfo
 
@@ -306,6 +338,7 @@ RegisterNetEvent('qb-tow:client:TowVehicle', function()
                             if NpcOn then
                                 RemoveBlip(CurrentBlip)
                                 QBCore.Functions.Notify("Take The Vehicle To Hayes Depot", "success", 5000)
+                                markerOn = true
                                 CurrentBlip2 = AddBlipForCoord(491.00, -1314.69, 29.25)
                                 SetBlipColour(CurrentBlip2, 3)
                                 SetBlipRoute(CurrentBlip2, true)
@@ -484,3 +517,85 @@ function RunWorkThread()
         ranWorkThread = false
     end
 end
+
+AddEventHandler("qb-towjob:client:signup", function()
+
+    TriggerServerEvent("qb-towjob:server:signup")
+
+end)
+
+AddEventHandler("qb-towjob:client:signoff", function()
+
+    TriggerServerEvent("qb-towjob:server:signoff")
+
+end)
+CreateThread(function()
+
+    while true do 
+        wait = 10000
+        if markerOn then 
+            wait = 1000
+            local playerPos = GetEntityCoords(PlayerPedId())
+            local pos = vector3(491.00, -1314.69, 29.25)
+            local dist = Vdist(playerPos, pos)
+            print(dist)
+            if dist < 100 then 
+                wait = 1
+                DrawText3D(x,y,z, "~g~E~w~ - Untow Vehicle")
+                DrawMarker(2, pos.x, pos.y, pos.z, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.5, 0.2, 200, 200, 200, 222, false, false, false, true, false, false, false)
+            end
+        end
+        Wait(wait)
+
+    end
+end)
+
+exports['qb-target']:AddBoxZone("towjobsignup",  vector4(471.6, -1311.09, 29.19, 188.43), 0.15, 0.35,{
+    name = "towjobsignup",
+    heading = 11.0,
+    debugPoly = true,
+    minZ = 0.77834,
+    maxZ = 30.87834,
+}, {
+    options = {
+        {
+    
+                type = "client",
+                event = "qb-towjob:client:signoff",
+                icon = "fas fa-circle",
+                label = "Sign Off",
+                job = "tow"
+        
+        },
+
+    },
+    distance = 1.5
+})
+exports['qb-target']:AddBoxZone("towjobsignup2", vector4(471.6, -1310.89, 29.19, 188.43), 0.15, 0.35, {
+    name = "towjobsignup2",
+    heading = 11.0,
+    debugPoly = true,
+    minZ = 0.77834,
+    maxZ = 30.87834,
+}, {
+    options = {
+            {
+    
+                type = "client",
+                event = "qb-towjob:client:signup",
+                icon = "fas fa-circle",
+                label = "Sign Up",
+                canInteract = function(entity) 
+                    local Player = QBCore.Functions.GetPlayerData()
+                    if Player.job.name == "police" or Player.job.name == "tow" then 
+                        return false
+                    else 
+                        return true 
+                    end
+                end
+            
+            },
+
+    },
+    distance = 1.5
+})

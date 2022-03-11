@@ -68,3 +68,23 @@ QBCore.Commands.Add("tow", "Place A Car On The Back Of Your Flatbed", {}, false,
         TriggerClientEvent("qb-tow:client:TowVehicle", source)
     end
 end)
+
+
+RegisterNetEvent('qb-towjob:server:signup', function(Payment) 
+
+    local src = source 
+    local Player = QBCore.Functions.GetPlayer(src)
+    Player.Functions.SetJob("tow")
+
+
+end)
+
+RegisterNetEvent('qb-towjob:server:signoff', function(Payment) 
+
+    local src = source 
+    local Player = QBCore.Functions.GetPlayer(src)
+    Player.Functions.SetJob("unemployed")
+
+
+end)
+
